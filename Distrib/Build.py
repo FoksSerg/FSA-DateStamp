@@ -259,7 +259,7 @@ class BuildConfig:
                 '--onedir',
                 '--windowed',
                 '--name', 'FSA-DateStamp',
-                '--add-data', f'{self.icons_dir}{os.pathsep}icons',
+                '--add-data', f'{self.icons_dir}:icons',
                 '--specpath', self.base_dir,
                 '--workpath', os.path.join(self.base_dir, 'build'),
                 '--distpath', os.path.join(self.base_dir, 'dist')
@@ -275,7 +275,7 @@ class BuildConfig:
                 version_file = os.path.join(self.project_root, 'version.txt')
                 if not os.path.exists(version_file):
                     logger.info("Создаем файл version.txt")
-                    with open(version_file, 'w') as f:
+                    with open(version_file, 'w', encoding='utf-8') as f:
                         f.write("""VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=(1, 0, 0, 0),
@@ -378,10 +378,12 @@ class BuildConfig:
             # Добавляем папку src как данные
             src_path = os.path.join(self.project_root, 'src')
             if os.path.exists(src_path):
+                # Используем правильный разделитель для PyInstaller
                 params.extend(['--add-data', f'{src_path}:src'])
             
             # Добавляем путь к основному скрипту (GUI версия)
-            params.append(os.path.join(self.project_root, 'start_gui.py'))
+            script_path = os.path.join(self.project_root, 'src', 'start_gui.py')
+            params.append(script_path)
             
             logger.info(f"Параметры сборки: {params}")
             return params
@@ -437,7 +439,8 @@ def build():
         # Запускаем сборку
         print_step("Запуск сборки")
         print(f"Команда: {' '.join(cmd)}")
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        # Запускаем PyInstaller из корня проекта для правильного поиска файлов
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, cwd=config.project_root)
         logger.info(result.stdout)
         if result.stderr:
             logger.warning(result.stderr)
