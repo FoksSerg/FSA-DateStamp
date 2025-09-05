@@ -1,0 +1,26 @@
+# Игнорируем временные файлы сборки
+build/
+dist/
+*.spec
+
+# Игнорируем логи
+logs/
+*.log
+
+# Игнорируем собранные приложения
+Windows/*.exe
+MacOS/*.app
+Linux/AppGen
+
+# Игнорируем системные файлы
+.DS_Store
+Thumbs.db
+
+# НЕ игнорируем
+!Build.py
+!Build_Config.json
+!Create_Icons.py
+!Icons/
+!Windows/
+!MacOS/
+!Linux/ 

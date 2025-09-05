@@ -157,3 +157,7 @@ Desktop.ini
 
 # Linux
 *~
+
+# Test folders
+TestFotoInput/
+TestFotoStamp/

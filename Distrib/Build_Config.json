@@ -1,0 +1,25 @@
+{
+  "include_files": [
+    "src/**/*.py",
+    "requirements.txt",
+    "README.md",
+    "datestamp_settings.ini",
+    "start_gui.py"
+  ],
+  "exclude_files": [
+    "**/__pycache__",
+    "*.log",
+    "*.db",
+    "logs/*",
+    "*.pyc",
+    "TestFotoInput/**",
+    "TestFotoStamp/**",
+    "*.jpg",
+    "*.jpeg",
+    "*.png",
+    "*.bmp",
+    "*.tiff",
+    "*.tif",
+    "config.ini"
+  ]
+} 
