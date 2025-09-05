@@ -7,6 +7,7 @@ FSA-DateStamp GUI - Графический интерфейс для добав�
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import os
+import sys
 import configparser
 from DateStamp import process_images_with_structure
 
@@ -17,15 +18,23 @@ class DateStampGUI:
         self.root.geometry("600x500")
         self.root.resizable(True, True)
         
+        # Определяем путь к файлу настроек рядом с исполняемым файлом
+        if getattr(sys, 'frozen', False):
+            # Если запущены через PyInstaller
+            self.config_file = os.path.join(os.path.dirname(sys.executable), 'datestamp_settings.ini')
+        else:
+            # Если запущены обычным Python
+            self.config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'datestamp_settings.ini')
+        
         # Настройки по умолчанию
-        self.config_file = "datestamp_settings.ini"
         self.settings = {
             'input_folder': '',
             'output_folder': '',
             'font_size': 60,
             'position': 'center',
             'margin_x': 50,
-            'margin_y': 30
+            'margin_y': 30,
+            'window_geometry': '600x500+100+100'
         }
         
         # Загружаем настройки
@@ -138,6 +147,9 @@ class DateStampGUI:
         
         # Привязка событий
         self.font_size_scale.configure(command=self.update_font_size_label)
+        
+        # Сохраняем настройки при закрытии окна
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def update_font_size_label(self, value):
         """Обновление метки размера шрифта"""
@@ -145,13 +157,25 @@ class DateStampGUI:
     
     def browse_input_folder(self):
         """Выбор исходной папки"""
-        folder = filedialog.askdirectory(title="Выберите папку с исходными изображениями")
+        # Определяем начальную папку
+        initial_dir = self.input_var.get() if self.input_var.get() and os.path.exists(self.input_var.get()) else os.path.expanduser("~")
+        
+        folder = filedialog.askdirectory(
+            title="Выберите папку с исходными изображениями",
+            initialdir=initial_dir
+        )
         if folder:
             self.input_var.set(folder)
     
     def browse_output_folder(self):
         """Выбор папки результатов"""
-        folder = filedialog.askdirectory(title="Выберите папку для сохранения результатов")
+        # Определяем начальную папку
+        initial_dir = self.output_var.get() if self.output_var.get() and os.path.exists(self.output_var.get()) else os.path.expanduser("~")
+        
+        folder = filedialog.askdirectory(
+            title="Выберите папку для сохранения результатов",
+            initialdir=initial_dir
+        )
         if folder:
             self.output_var.set(folder)
     
@@ -169,9 +193,13 @@ class DateStampGUI:
                 self.settings['position'] = section.get('position', 'center')
                 self.settings['margin_x'] = section.getint('margin_x', 50)
                 self.settings['margin_y'] = section.getint('margin_y', 30)
+                self.settings['window_geometry'] = section.get('window_geometry', '600x500+100+100')
     
     def save_settings(self):
         """Сохранение настроек в файл"""
+        # Сохраняем текущую геометрию окна
+        self.settings['window_geometry'] = self.root.geometry()
+        
         config = configparser.ConfigParser()
         config['Settings'] = {
             'input_folder': self.input_var.get(),
@@ -179,8 +207,12 @@ class DateStampGUI:
             'font_size': str(self.font_size_var.get()),
             'position': self.position_var.get(),
             'margin_x': str(self.margin_x_var.get()),
-            'margin_y': str(self.margin_y_var.get())
+            'margin_y': str(self.margin_y_var.get()),
+            'window_geometry': self.settings['window_geometry']
         }
+        
+        # Создаем директорию если не существует
+        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
         
         with open(self.config_file, 'w', encoding='utf-8') as f:
             config.write(f)
@@ -197,6 +229,14 @@ class DateStampGUI:
         self.margin_x_var.set(self.settings['margin_x'])
         self.margin_y_var.set(self.settings['margin_y'])
         self.update_font_size_label(self.settings['font_size'])
+        
+        # Применяем геометрию окна
+        self.root.geometry(self.settings['window_geometry'])
+        
+        # Включаем режим "поверх всех окон" на 3 секунды при запуске
+        self.root.attributes('-topmost', True)
+        # Отключаем режим "поверх всех окон" через 3 секунды
+        self.root.after(3000, lambda: self.root.attributes('-topmost', False))
     
     def process_images(self):
         """Обработка изображений"""
@@ -246,6 +286,12 @@ class DateStampGUI:
         
         finally:
             self.root.after(3000, lambda: self.status_var.set("Готов к работе"))
+    
+    def on_closing(self):
+        """Обработчик закрытия окна"""
+        # Сохраняем настройки перед закрытием
+        self.save_settings()
+        self.root.destroy()
 
 def main():
     """Главная функция"""

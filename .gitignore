@@ -161,3 +161,6 @@ Desktop.ini
 # Test folders
 TestFotoInput/
 TestFotoStamp/
+
+# Settings files
+datestamp_settings.ini

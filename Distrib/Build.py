@@ -256,7 +256,7 @@ class BuildConfig:
             # Базовые параметры
             params = [
                 '--noconfirm',
-                '--onefile',
+                '--onedir',
                 '--windowed',
                 '--name', 'FSA-DateStamp',
                 '--add-data', f'{self.icons_dir}{os.pathsep}icons',
@@ -347,10 +347,41 @@ class BuildConfig:
             params.extend(['--hidden-import', 'DateStampGUI'])
             params.extend(['--hidden-import', 'DateStamp'])
             params.extend(['--hidden-import', 'PacketFolder'])
-            params.extend(['--hidden-import', 'TestFotoProcessor'])
+            
+            # tkinter и его модули
+            params.extend(['--hidden-import', 'tkinter'])
+            params.extend(['--hidden-import', 'tkinter.filedialog'])
+            params.extend(['--hidden-import', 'tkinter.ttk'])
+            params.extend(['--hidden-import', 'tkinter.messagebox'])
+            
+            # PIL и его модули
+            params.extend(['--hidden-import', 'PIL'])
+            params.extend(['--hidden-import', 'PIL.Image'])
+            params.extend(['--hidden-import', 'PIL.ImageDraw'])
+            params.extend(['--hidden-import', 'PIL.ImageFont'])
+            
+            # OpenCV
+            params.extend(['--hidden-import', 'cv2'])
+            
+            # EXIF библиотеки
+            params.extend(['--hidden-import', 'exifread'])
+            params.extend(['--hidden-import', 'piexif'])
+            
+            # Стандартные библиотеки
+            params.extend(['--hidden-import', 'configparser'])
+            params.extend(['--hidden-import', 'argparse'])
+            params.extend(['--hidden-import', 'shutil'])
+            params.extend(['--hidden-import', 'stat'])
+            params.extend(['--hidden-import', 'subprocess'])
+            params.extend(['--hidden-import', 'datetime'])
+            
+            # Добавляем папку src как данные
+            src_path = os.path.join(self.project_root, 'src')
+            if os.path.exists(src_path):
+                params.extend(['--add-data', f'{src_path}:src'])
             
             # Добавляем путь к основному скрипту (GUI версия)
-            params.append(os.path.join(self.project_root, 'src', 'start_gui.py'))
+            params.append(os.path.join(self.project_root, 'start_gui.py'))
             
             logger.info(f"Параметры сборки: {params}")
             return params
