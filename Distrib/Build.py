@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """
 Скрипт сборки приложения для всех поддерживаемых платформ
+
+Версия: 1.01.25.249 (6 сентября 2025)
+Компания: AW-Software
+Автор: Сергей Фокин @FoksSerg
+Email: foks_serg@mail.ru
+
+Система версионирования: X.YY.ZZ.DDD
+- X - мажорная версия (1)
+- YY - минорная версия (01)
+- ZZ - год (25 = 2025)
+- DDD - день года (249 = 6 сентября)
 """
 
 import os
@@ -224,16 +235,19 @@ class BuildConfig:
             logger.error(traceback.format_exc())
             raise
                     
-    def clean_temp_files(self):
+    def clean_temp_files(self, exclude_dist=False):
         """Очистка временных файлов сборки"""
         temp_files = [
             'build',
-            'dist',
             'FSA-DateStamp.spec',
             'FSA-DateStamp-Windows.zip',
             'FSA-DateStamp-MacOS.zip',
             'FSA-DateStamp-Linux.tar'
         ]
+        
+        # Добавляем dist только если не исключаем его
+        if not exclude_dist:
+            temp_files.append('dist')
         
         logger.info("Начало очистки временных файлов")
         # Очищаем в директории сборки
@@ -256,10 +270,10 @@ class BuildConfig:
             # Базовые параметры
             params = [
                 '--noconfirm',
-                '--onedir',
+                '--onefile',
                 '--windowed',
                 '--name', 'FSA-DateStamp',
-                '--add-data', f'{self.icons_dir}:icons',
+                '--add-data', f'{self.icons_dir};icons',
                 '--specpath', self.base_dir,
                 '--workpath', os.path.join(self.base_dir, 'build'),
                 '--distpath', os.path.join(self.base_dir, 'dist')
@@ -278,8 +292,8 @@ class BuildConfig:
                     with open(version_file, 'w', encoding='utf-8') as f:
                         f.write("""VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(1, 1, 25, 249),
+    prodvers=(1, 1, 25, 249),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -291,14 +305,14 @@ class BuildConfig:
     StringFileInfo([
       StringTable(
         u'040904B0',
-        [StringStruct(u'CompanyName', u'FSA'),
+        [StringStruct(u'CompanyName', u'AW-Software'),
         StringStruct(u'FileDescription', u'FSA-DateStamp - Добавление водяных знаков с датой'),
-        StringStruct(u'FileVersion', u'1.0.0'),
+        StringStruct(u'FileVersion', u'1.01.25.249'),
         StringStruct(u'InternalName', u'FSA-DateStamp'),
-        StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
+        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 AW-Software'),
         StringStruct(u'OriginalFilename', u'FSA-DateStamp.exe'),
         StringStruct(u'ProductName', u'FSA-DateStamp'),
-        StringStruct(u'ProductVersion', u'1.0.0')])
+        StringStruct(u'ProductVersion', u'1.01.25.249')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
@@ -312,7 +326,7 @@ class BuildConfig:
                     '--noconsole'
                 ])
                 
-                # Добавляем скрытые импорты для FSA-DateStamp
+                    # Добавляем скрытые импорты для FSA-DateStamp
                 params.extend(['--hidden-import', 'PIL'])
                 params.extend(['--hidden-import', 'PIL.Image'])
                 params.extend(['--hidden-import', 'PIL.ImageDraw'])
@@ -323,6 +337,10 @@ class BuildConfig:
                 params.extend(['--hidden-import', 'tkinter'])
                 params.extend(['--hidden-import', 'tkinter.filedialog'])
                 params.extend(['--hidden-import', 'tkinter.ttk'])
+                params.extend(['--hidden-import', 'tkinter.messagebox'])
+                params.extend(['--hidden-import', 'DateStampGUI'])
+                params.extend(['--hidden-import', 'DateStamp'])
+                params.extend(['--hidden-import', 'PacketFolder'])
                 params.extend(['--hidden-import', 'configparser'])
                 
             # Специфичные параметры для macOS
@@ -343,43 +361,44 @@ class BuildConfig:
                     '--clean'
                 ])
                 
-            # Добавляем скрытые импорты для всех модулей
-            params.extend(['--hidden-import', 'DateStampGUI'])
-            params.extend(['--hidden-import', 'DateStamp'])
-            params.extend(['--hidden-import', 'PacketFolder'])
-            
-            # tkinter и его модули
-            params.extend(['--hidden-import', 'tkinter'])
-            params.extend(['--hidden-import', 'tkinter.filedialog'])
-            params.extend(['--hidden-import', 'tkinter.ttk'])
-            params.extend(['--hidden-import', 'tkinter.messagebox'])
-            
-            # PIL и его модули
-            params.extend(['--hidden-import', 'PIL'])
-            params.extend(['--hidden-import', 'PIL.Image'])
-            params.extend(['--hidden-import', 'PIL.ImageDraw'])
-            params.extend(['--hidden-import', 'PIL.ImageFont'])
-            
-            # OpenCV
-            params.extend(['--hidden-import', 'cv2'])
-            
-            # EXIF библиотеки
-            params.extend(['--hidden-import', 'exifread'])
-            params.extend(['--hidden-import', 'piexif'])
-            
-            # Стандартные библиотеки
-            params.extend(['--hidden-import', 'configparser'])
-            params.extend(['--hidden-import', 'argparse'])
-            params.extend(['--hidden-import', 'shutil'])
-            params.extend(['--hidden-import', 'stat'])
-            params.extend(['--hidden-import', 'subprocess'])
-            params.extend(['--hidden-import', 'datetime'])
+            # Добавляем скрытые импорты для всех модулей (только для не-Windows платформ)
+            if not self.is_windows:
+                params.extend(['--hidden-import', 'DateStampGUI'])
+                params.extend(['--hidden-import', 'DateStamp'])
+                params.extend(['--hidden-import', 'PacketFolder'])
+                
+                # tkinter и его модули
+                params.extend(['--hidden-import', 'tkinter'])
+                params.extend(['--hidden-import', 'tkinter.filedialog'])
+                params.extend(['--hidden-import', 'tkinter.ttk'])
+                params.extend(['--hidden-import', 'tkinter.messagebox'])
+                
+                # PIL и его модули
+                params.extend(['--hidden-import', 'PIL'])
+                params.extend(['--hidden-import', 'PIL.Image'])
+                params.extend(['--hidden-import', 'PIL.ImageDraw'])
+                params.extend(['--hidden-import', 'PIL.ImageFont'])
+                
+                # OpenCV
+                params.extend(['--hidden-import', 'cv2'])
+                
+                # EXIF библиотеки
+                params.extend(['--hidden-import', 'exifread'])
+                params.extend(['--hidden-import', 'piexif'])
+                
+                # Стандартные библиотеки
+                params.extend(['--hidden-import', 'configparser'])
+                params.extend(['--hidden-import', 'argparse'])
+                params.extend(['--hidden-import', 'shutil'])
+                params.extend(['--hidden-import', 'stat'])
+                params.extend(['--hidden-import', 'subprocess'])
+                params.extend(['--hidden-import', 'datetime'])
             
             # Добавляем папку src как данные
             src_path = os.path.join(self.project_root, 'src')
             if os.path.exists(src_path):
-                # Используем правильный разделитель для PyInstaller
-                params.extend(['--add-data', f'{src_path}:src'])
+                # Используем правильный разделитель для PyInstaller на Windows
+                params.extend(['--add-data', f'{src_path};src'])
             
             # Добавляем путь к основному скрипту (GUI версия)
             script_path = os.path.join(self.project_root, 'src', 'start_gui.py')
@@ -447,28 +466,62 @@ def build():
         
         # Перемещаем собранное приложение в соответствующую директорию
         print_step("Перемещение собранного приложения")
+        move_success = False
+        
         if config.is_windows:
-            if os.path.exists(os.path.join(config.base_dir, 'dist', 'FSA-DateStamp.exe')):
+            source_file = os.path.join(config.base_dir, 'dist', 'FSA-DateStamp.exe')
+            if os.path.exists(source_file):
                 print("Перемещение Windows-версии")
-                shutil.move(
-                    os.path.join(config.base_dir, 'dist', 'FSA-DateStamp.exe'),
-                    config.platform_dirs['Windows']
-                )
+                try:
+                    # Очищаем целевую директорию перед копированием
+                    if os.path.exists(config.platform_dirs['Windows']):
+                        shutil.rmtree(config.platform_dirs['Windows'])
+                    os.makedirs(config.platform_dirs['Windows'], exist_ok=True)
+                    
+                    # Копируем исполняемый файл
+                    target_file = os.path.join(config.platform_dirs['Windows'], 'FSA-DateStamp.exe')
+                    shutil.copy2(source_file, target_file)
+                    move_success = True
+                    logger.info(f"Windows-версия успешно перемещена в {config.platform_dirs['Windows']}")
+                except Exception as e:
+                    logger.error(f"Ошибка при перемещении Windows-версии: {str(e)}")
+                    raise
+            else:
+                logger.error(f"Файл {source_file} не найден!")
+                raise FileNotFoundError(f"Собранное приложение не найдено: {source_file}")
+                
         elif config.is_macos:
             app_path = os.path.join(config.base_dir, 'dist', 'FSA-DateStamp.app')
             if os.path.exists(app_path):
                 print("Перемещение macOS-версии")
                 target_path = os.path.join(config.platform_dirs['MacOS'], 'FSA-DateStamp.app')
-                if os.path.exists(target_path):
-                    shutil.rmtree(target_path)
-                shutil.copytree(app_path, target_path)
+                try:
+                    if os.path.exists(target_path):
+                        shutil.rmtree(target_path)
+                    shutil.copytree(app_path, target_path)
+                    move_success = True
+                    logger.info(f"macOS-версия успешно перемещена в {config.platform_dirs['MacOS']}")
+                except Exception as e:
+                    logger.error(f"Ошибка при перемещении macOS-версии: {str(e)}")
+                    raise
+            else:
+                logger.error(f"Приложение {app_path} не найдено!")
+                raise FileNotFoundError(f"Собранное приложение не найдено: {app_path}")
+                
         else:  # Linux
-            if os.path.exists(os.path.join(config.base_dir, 'dist', 'FSA-DateStamp')):
+            source_path = os.path.join(config.base_dir, 'dist', 'FSA-DateStamp')
+            if os.path.exists(source_path):
                 print("Перемещение Linux-версии")
-                shutil.move(
-                    os.path.join(config.base_dir, 'dist', 'FSA-DateStamp'),
-                    config.platform_dirs['Linux']
-                )
+                try:
+                    shutil.move(source_path, config.platform_dirs['Linux'])
+                    move_success = True
+                    logger.info(f"Linux-версия успешно перемещена в {config.platform_dirs['Linux']}")
+                except Exception as e:
+                    logger.error(f"Ошибка при перемещении Linux-версии: {str(e)}")
+                    raise
+            else:
+                logger.error(f"Файл {source_path} не найден!")
+                raise FileNotFoundError(f"Собранное приложение не найдено: {source_path}")
             
         print_success("Сборка завершена успешно!")
         print("Результаты сборки находятся в:")
@@ -479,6 +532,11 @@ def build():
         else:
             print(f"- Linux: {config.platform_dirs['Linux']}")
             
+        # ОБЯЗАТЕЛЬНАЯ очистка временных файлов после успешной сборки
+        print_step("Очистка временных файлов сборки")
+        config.clean_temp_files(exclude_dist=False)
+        print_success("Временные файлы успешно удалены")
+            
     except subprocess.CalledProcessError as e:
         print_error(f"Ошибка выполнения команды: {str(e)}")
         logger.error(f"Ошибка выполнения команды: {str(e)}")
@@ -488,11 +546,11 @@ def build():
         logger.error(f"Ошибка сборки: {str(e)}")
         logger.error(traceback.format_exc())
     finally:
-        # Очищаем временные файлы в любом случае
-        if config:
+        # Очищаем временные файлы только при ошибке
+        if config and 'move_success' not in locals():
             try:
-                print_step("Очистка временных файлов")
-                config.clean_temp_files()
+                print_step("Очистка временных файлов после ошибки")
+                config.clean_temp_files(exclude_dist=False)
                 print_success("Временные файлы успешно удалены")
             except Exception as e:
                 print_error(f"Ошибка при очистке временных файлов: {str(e)}")

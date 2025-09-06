@@ -164,3 +164,6 @@ TestFotoStamp/
 
 # Settings files
 datestamp_settings.ini
+
+# Installer generated files
+Installer/Windows/InnoSetup/

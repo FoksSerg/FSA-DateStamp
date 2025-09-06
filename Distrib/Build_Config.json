@@ -3,7 +3,6 @@
     "src/**/*.py",
     "requirements.txt",
     "README.md",
-    "datestamp_settings.ini",
     "start_gui.py"
   ],
   "exclude_files": [
@@ -12,14 +11,13 @@
     "*.db",
     "logs/*",
     "*.pyc",
-    "TestFotoInput/**",
-    "TestFotoStamp/**",
     "*.jpg",
     "*.jpeg",
     "*.png",
     "*.bmp",
     "*.tiff",
     "*.tif",
+    "datestamp_settings.ini",
     "config.ini"
   ]
 } 
