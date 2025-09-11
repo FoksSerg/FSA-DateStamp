@@ -25,8 +25,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "C:\FSA-DateStamp\Distrib\Windows\FSA-DateStamp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\FSA-DateStamp\Distrib\Windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "w:\Project\FSA-DateStamp\Distrib\Windows\FSA-DateStamp.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "w:\Project\FSA-DateStamp\Distrib\Windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\FSA-DateStamp"; Filename: "{app}\FSA-DateStamp.exe"
