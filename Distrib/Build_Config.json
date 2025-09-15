@@ -3,7 +3,8 @@
     "src/**/*.py",
     "requirements.txt",
     "README.md",
-    "start_gui.py"
+    "start_gui.py",
+    "version.txt"
   ],
   "exclude_files": [
     "**/__pycache__",
@@ -18,6 +19,21 @@
     "*.tiff",
     "*.tif",
     "datestamp_settings.ini",
-    "config.ini"
-  ]
+    "config.ini",
+    "build/**",
+    "dist/**",
+    "*.spec"
+  ],
+  "universal_build": {
+    "description": "Универсальная сборка для Windows 7-11",
+    "compatibility": "Windows 7, 8, 8.1, 10, 11",
+    "architecture": "x86/x64",
+    "python_version": "3.8-3.13",
+    "features": [
+      "Автоматическое определение версии Windows",
+      "Включение всех необходимых DLL",
+      "Совместимость с Windows 7+",
+      "Универсальная архитектура"
+    ]
+  }
 } 

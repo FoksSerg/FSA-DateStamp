@@ -273,13 +273,13 @@ class BuildConfig:
                 '--onefile',
                 '--windowed',
                 '--name', 'FSA-DateStamp',
-                '--add-data', f'{self.icons_dir};icons',
+                '--add-data', f'{self.icons_dir}:icons',
                 '--specpath', self.base_dir,
                 '--workpath', os.path.join(self.base_dir, 'build'),
                 '--distpath', os.path.join(self.base_dir, 'dist')
             ]
             
-            # Специфичные параметры для Windows
+            # Специфичные параметры для Windows (универсальная совместимость)
             if self.is_windows:
                 icon_path = os.path.join(self.icons_dir, 'app.ico')
                 if os.path.exists(icon_path):
@@ -318,30 +318,82 @@ class BuildConfig:
   ]
 )""")
                 
+                # Универсальные параметры для совместимости с Windows 7-11
                 params.extend([
                     '--version-file', version_file,
                     '--uac-admin',
                     '--clean',
-                    '--target-arch', 'x64',
-                    '--noconsole'
+                    # Убираем --target-arch для максимальной совместимости
+                    '--noconsole',
+                    # Принудительно собираем все зависимости для универсальной совместимости
+                    '--collect-all',
+                    '--collect-binaries',
+                    '--collect-data',
+                    '--collect-submodules',
+                    # Дополнительные параметры для Windows 7
+                    '--win-private-assemblies',
+                    '--win-no-prefer-redirects',
+                    # Включаем все системные библиотеки
+                    '--collect-dll',
+                    '--collect-all-dll'
                 ])
                 
-                    # Добавляем скрытые импорты для FSA-DateStamp
+                # Добавляем скрытые импорты для FSA-DateStamp (универсальная совместимость)
+                # Основные модули приложения
+                params.extend(['--hidden-import', 'DateStampGUI'])
+                params.extend(['--hidden-import', 'DateStamp'])
+                params.extend(['--hidden-import', 'PacketFolder'])
+                
+                # PIL и его модули
                 params.extend(['--hidden-import', 'PIL'])
                 params.extend(['--hidden-import', 'PIL.Image'])
                 params.extend(['--hidden-import', 'PIL.ImageDraw'])
                 params.extend(['--hidden-import', 'PIL.ImageFont'])
+                params.extend(['--hidden-import', 'PIL.ImageFilter'])
+                params.extend(['--hidden-import', 'PIL.ImageOps'])
+                params.extend(['--hidden-import', 'PIL.ImageEnhance'])
+                
+                # OpenCV
                 params.extend(['--hidden-import', 'cv2'])
+                params.extend(['--hidden-import', 'cv2.cv2'])
+                
+                # EXIF библиотеки
                 params.extend(['--hidden-import', 'exifread'])
                 params.extend(['--hidden-import', 'piexif'])
+                
+                # tkinter и его модули
                 params.extend(['--hidden-import', 'tkinter'])
                 params.extend(['--hidden-import', 'tkinter.filedialog'])
                 params.extend(['--hidden-import', 'tkinter.ttk'])
                 params.extend(['--hidden-import', 'tkinter.messagebox'])
-                params.extend(['--hidden-import', 'DateStampGUI'])
-                params.extend(['--hidden-import', 'DateStamp'])
-                params.extend(['--hidden-import', 'PacketFolder'])
+                params.extend(['--hidden-import', 'tkinter.simpledialog'])
+                params.extend(['--hidden-import', 'tkinter.colorchooser'])
+                
+                # Стандартные библиотеки Python
                 params.extend(['--hidden-import', 'configparser'])
+                params.extend(['--hidden-import', 'argparse'])
+                params.extend(['--hidden-import', 'shutil'])
+                params.extend(['--hidden-import', 'stat'])
+                params.extend(['--hidden-import', 'subprocess'])
+                params.extend(['--hidden-import', 'datetime'])
+                params.extend(['--hidden-import', 'os'])
+                params.extend(['--hidden-import', 'sys'])
+                params.extend(['--hidden-import', 'json'])
+                params.extend(['--hidden-import', 'logging'])
+                params.extend(['--hidden-import', 'traceback'])
+                
+                # Дополнительные модули для совместимости
+                params.extend(['--hidden-import', 'numpy'])
+                params.extend(['--hidden-import', 'numpy.core'])
+                params.extend(['--hidden-import', 'numpy.core._methods'])
+                params.extend(['--hidden-import', 'numpy.lib.format'])
+                
+                # Windows-специфичные модули
+                params.extend(['--hidden-import', 'win32api'])
+                params.extend(['--hidden-import', 'win32con'])
+                params.extend(['--hidden-import', 'win32gui'])
+                params.extend(['--hidden-import', 'win32process'])
+                params.extend(['--hidden-import', 'pywintypes'])
                 
             # Специфичные параметры для macOS
             elif self.is_macos:
@@ -397,8 +449,8 @@ class BuildConfig:
             # Добавляем папку src как данные
             src_path = os.path.join(self.project_root, 'src')
             if os.path.exists(src_path):
-                # Используем правильный разделитель для PyInstaller на Windows
-                params.extend(['--add-data', f'{src_path};src'])
+                # Используем правильный разделитель для PyInstaller на macOS/Unix
+                params.extend(['--add-data', f'{src_path}:src'])
             
             # Добавляем путь к основному скрипту (GUI версия)
             script_path = os.path.join(self.project_root, 'src', 'start_gui.py')
