@@ -24,6 +24,10 @@ import logging
 import traceback
 from datetime import datetime
 
+# Импорт winreg только на Windows
+if platform.system() == 'Windows':
+    import winreg
+
 # Настройка логирования
 def setup_logging():
     log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Logs')
@@ -80,6 +84,88 @@ def print_warning(text):
     """Печать предупреждения в консоль"""
     print(f"\n! {text}")
 
+def get_windows_version():
+    """Определение версии Windows для выбора стратегии сборки"""
+    try:
+        if platform.system() != 'Windows':
+            return 'unknown'
+        
+        # Сначала проверяем platform.platform() - это самый надежный способ
+        platform_info = platform.platform()
+        release = platform.release()
+        
+        logger.info(f"Platform: {platform_info}, Release: {release}")
+        
+        # Приоритет: platform.platform() для Windows 11
+        if 'Windows-11' in platform_info or 'windows-11' in platform_info.lower():
+            logger.info("Определено как Windows 11 по platform.platform()")
+            return 'windows11'
+        
+        # Получаем версию Windows из реестра для остальных случаев
+        try:
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 
+                               r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+            version, _ = winreg.QueryValueEx(key, "CurrentVersion")
+            build_number, _ = winreg.QueryValueEx(key, "CurrentBuild")
+            product_name, _ = winreg.QueryValueEx(key, "ProductName")
+            winreg.CloseKey(key)
+            
+            logger.info(f"Registry: version={version}, build={build_number}, product={product_name}")
+            
+            # Определяем версию по номеру и build number
+            if version.startswith('6.1'):
+                return 'windows7'
+            elif version.startswith('6.2'):
+                return 'windows8'
+            elif version.startswith('6.3'):
+                return 'windows8_1'
+            elif version.startswith('10.0'):
+                # Windows 10 vs Windows 11 по build number и названию продукта
+                try:
+                    build = int(build_number)
+                    product_lower = product_name.lower()
+                    
+                    # Проверяем название продукта для Windows 11
+                    if 'windows 11' in product_lower or build >= 22000:
+                        return 'windows11'
+                    else:  # Windows 10
+                        return 'windows10'
+                except ValueError:
+                    return 'windows10'  # Fallback
+            else:
+                return 'windows11'
+                
+        except Exception as e:
+            logger.warning(f"Ошибка чтения реестра: {str(e)}")
+            # Fallback - используем platform.release()
+            if release == '7':
+                return 'windows7'
+            elif release == '8':
+                return 'windows8'
+            elif release == '8.1':
+                return 'windows8_1'
+            elif release == '10':
+                return 'windows10'
+            else:
+                return 'windows11'
+                
+    except Exception as e:
+        logger.warning(f"Не удалось определить версию Windows: {str(e)}")
+        return 'unknown'
+
+def _get_target_dir_name(windows_version):
+    """Получение имени целевой директории на основе версии Windows"""
+    if windows_version == 'windows7':
+        return 'Windows7'
+    elif windows_version in ['windows8', 'windows8_1']:
+        return 'Windows8'
+    elif windows_version == 'windows10':
+        return 'Windows10'
+    elif windows_version == 'windows11':
+        return 'Windows11'
+    else:
+        return 'Universal'
+
 class BuildConfig:
     """Конфигурация сборки"""
     
@@ -99,9 +185,14 @@ class BuildConfig:
             self.project_root = os.path.dirname(self.base_dir)
             self.icons_dir = os.path.join(self.base_dir, 'Icons')
             
-            # Определяем только текущую платформу для сборки
+            # Определяем версию Windows для версионных сборок
+            self.windows_version = get_windows_version() if self.is_windows else None
+            
+            # Определяем платформо-специфичные директории
             if self.is_windows:
-                self.platform_dirs = {'Windows': os.path.join(self.base_dir, 'Windows')}
+                # Создаем только нужную директорию для текущей версии Windows
+                target_dir_name = _get_target_dir_name(self.windows_version)
+                self.platform_dirs = {target_dir_name: os.path.join(self.base_dir, target_dir_name)}
             elif self.is_macos:
                 self.platform_dirs = {'MacOS': os.path.join(self.base_dir, 'MacOS')}
             else:
@@ -208,15 +299,26 @@ class BuildConfig:
             logger.error(traceback.format_exc())
             raise
                 
+    def get_target_directory(self):
+        """Получение целевой директории для сборки на основе версии Windows"""
+        try:
+            if self.is_windows:
+                # Возвращаем единственную созданную директорию
+                return list(self.platform_dirs.values())[0]
+            elif self.is_macos:
+                return self.platform_dirs['MacOS']
+            else:
+                return self.platform_dirs['Linux']
+                
+        except Exception as e:
+            logger.error(f"Ошибка при определении целевой директории: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+
     def clean_target_directory(self):
         """Очистка целевой директории перед сборкой"""
         try:
-            if self.is_windows:
-                target_dir = self.platform_dirs['Windows']
-            elif self.is_macos:
-                target_dir = self.platform_dirs['MacOS']
-            else:
-                target_dir = self.platform_dirs['Linux']
+            target_dir = self.get_target_directory()
                 
             if os.path.exists(target_dir):
                 logger.info(f"Очистка целевой директории: {target_dir}")
@@ -264,6 +366,62 @@ class BuildConfig:
                 logger.error(f"Ошибка при удалении {item_path}: {str(e)}")
                 logger.error(traceback.format_exc())
                 
+    def _create_version_file(self, version_file):
+        """Создание файла version.txt с учетом версии Windows"""
+        try:
+            # Определяем OS код для версии Windows
+            if self.windows_version == 'windows7':
+                os_code = '0x40001'  # Windows 7
+                description = 'FSA-DateStamp - Версия для Windows 7'
+            elif self.windows_version in ['windows8', 'windows8_1']:
+                os_code = '0x40002'  # Windows 8
+                description = 'FSA-DateStamp - Версия для Windows 8/8.1'
+            elif self.windows_version == 'windows10':
+                os_code = '0x40004'  # Windows 10
+                description = 'FSA-DateStamp - Версия для Windows 10'
+            elif self.windows_version == 'windows11':
+                os_code = '0x40004'  # Windows 11 (использует тот же код)
+                description = 'FSA-DateStamp - Версия для Windows 11'
+            else:
+                os_code = '0x40004'  # Fallback
+                description = 'FSA-DateStamp - Универсальная версия'
+            
+            version_content = f"""VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 1, 25, 249),
+    prodvers=(1, 1, 25, 249),
+    mask=0x3f,
+    flags=0x0,
+    OS={os_code},
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        u'040904B0',
+        [StringStruct(u'CompanyName', u'AW-Software'),
+        StringStruct(u'FileDescription', u'{description}'),
+        StringStruct(u'FileVersion', u'1.01.25.249'),
+        StringStruct(u'InternalName', u'FSA-DateStamp'),
+        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 AW-Software'),
+        StringStruct(u'OriginalFilename', u'FSA-DateStamp.exe'),
+        StringStruct(u'ProductName', u'FSA-DateStamp'),
+        StringStruct(u'ProductVersion', u'1.01.25.249')])
+      ]),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)"""
+            
+            with open(version_file, 'w', encoding='utf-8') as f:
+                f.write(version_content)
+            logger.info(f"Создан файл version.txt для {self.windows_version}")
+            
+        except Exception as e:
+            logger.error(f"Ошибка при создании version.txt: {str(e)}")
+            raise
+
     def get_build_params(self):
         """Получение параметров сборки для текущей платформы"""
         try:
@@ -279,64 +437,39 @@ class BuildConfig:
                 '--distpath', os.path.join(self.base_dir, 'dist')
             ]
             
-            # Специфичные параметры для Windows (универсальная совместимость)
+            # Специфичные параметры для Windows (версионные сборки)
             if self.is_windows:
                 icon_path = os.path.join(self.icons_dir, 'app.ico')
                 if os.path.exists(icon_path):
                     params.extend(['--icon', icon_path])
                 
-                # Проверяем/создаем version.txt
+                # Создаем version.txt с учетом версии Windows
                 version_file = os.path.join(self.project_root, 'version.txt')
-                if not os.path.exists(version_file):
-                    logger.info("Создаем файл version.txt")
-                    with open(version_file, 'w', encoding='utf-8') as f:
-                        f.write("""VSVersionInfo(
-  ffi=FixedFileInfo(
-    filevers=(1, 1, 25, 249),
-    prodvers=(1, 1, 25, 249),
-    mask=0x3f,
-    flags=0x0,
-    OS=0x40004,
-    fileType=0x1,
-    subtype=0x0,
-    date=(0, 0)
-  ),
-  kids=[
-    StringFileInfo([
-      StringTable(
-        u'040904B0',
-        [StringStruct(u'CompanyName', u'AW-Software'),
-        StringStruct(u'FileDescription', u'FSA-DateStamp - Добавление водяных знаков с датой'),
-        StringStruct(u'FileVersion', u'1.01.25.249'),
-        StringStruct(u'InternalName', u'FSA-DateStamp'),
-        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 AW-Software'),
-        StringStruct(u'OriginalFilename', u'FSA-DateStamp.exe'),
-        StringStruct(u'ProductName', u'FSA-DateStamp'),
-        StringStruct(u'ProductVersion', u'1.01.25.249')])
-      ]),
-    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-  ]
-)""")
+                self._create_version_file(version_file)
                 
-                # Универсальные параметры для совместимости с Windows 7-11
+                # Базовые параметры для всех версий Windows
                 params.extend([
                     '--version-file', version_file,
                     '--uac-admin',
                     '--clean',
-                    # Убираем --target-arch для максимальной совместимости
-                    '--noconsole',
-                    # Принудительно собираем все зависимости для универсальной совместимости
-                    '--collect-all',
-                    '--collect-binaries',
-                    '--collect-data',
-                    '--collect-submodules',
-                    # Дополнительные параметры для Windows 7
-                    '--win-private-assemblies',
-                    '--win-no-prefer-redirects',
-                    # Включаем все системные библиотеки
-                    '--collect-dll',
-                    '--collect-all-dll'
+                    '--noconsole'
                 ])
+                
+                # Специфичные параметры в зависимости от версии Windows
+                if self.windows_version == 'windows7':
+                    # Windows 7 - максимальная совместимость
+                    params.extend([
+                        '--target-arch', 'x86',  # x86 для максимальной совместимости
+                        '--win-private-assemblies',
+                        '--win-no-prefer-redirects'
+                    ])
+                    logger.info("Сборка для Windows 7 - режим максимальной совместимости")
+                else:
+                    # Windows 8+ - современные параметры
+                    params.extend([
+                        '--target-arch', 'x64'  # x64 для современных версий
+                    ])
+                    logger.info(f"Сборка для {self.windows_version} - современный режим")
                 
                 # Добавляем скрытые импорты для FSA-DateStamp (универсальная совместимость)
                 # Основные модули приложения
@@ -468,7 +601,8 @@ class BuildConfig:
         """Получение пути к собранному приложению"""
         try:
             if self.is_windows:
-                return os.path.join(self.platform_dirs['Windows'], 'FSA-DateStamp.exe')
+                target_dir = self.get_target_directory()
+                return os.path.join(target_dir, 'FSA-DateStamp.exe')
             elif self.is_macos:
                 return os.path.join(self.platform_dirs['MacOS'], 'FSA-DateStamp.app')
             else:  # Linux
@@ -523,18 +657,19 @@ def build():
         if config.is_windows:
             source_file = os.path.join(config.base_dir, 'dist', 'FSA-DateStamp.exe')
             if os.path.exists(source_file):
-                print("Перемещение Windows-версии")
+                target_dir = config.get_target_directory()
+                print(f"Перемещение Windows-версии для {config.windows_version}")
                 try:
                     # Очищаем целевую директорию перед копированием
-                    if os.path.exists(config.platform_dirs['Windows']):
-                        shutil.rmtree(config.platform_dirs['Windows'])
-                    os.makedirs(config.platform_dirs['Windows'], exist_ok=True)
+                    if os.path.exists(target_dir):
+                        shutil.rmtree(target_dir)
+                    os.makedirs(target_dir, exist_ok=True)
                     
                     # Копируем исполняемый файл
-                    target_file = os.path.join(config.platform_dirs['Windows'], 'FSA-DateStamp.exe')
+                    target_file = os.path.join(target_dir, 'FSA-DateStamp.exe')
                     shutil.copy2(source_file, target_file)
                     move_success = True
-                    logger.info(f"Windows-версия успешно перемещена в {config.platform_dirs['Windows']}")
+                    logger.info(f"Windows-версия для {config.windows_version} успешно перемещена в {target_dir}")
                 except Exception as e:
                     logger.error(f"Ошибка при перемещении Windows-версии: {str(e)}")
                     raise
@@ -578,7 +713,8 @@ def build():
         print_success("Сборка завершена успешно!")
         print("Результаты сборки находятся в:")
         if config.is_windows:
-            print(f"- Windows: {config.platform_dirs['Windows']}")
+            target_dir = config.get_target_directory()
+            print(f"- Windows {config.windows_version}: {target_dir}")
         elif config.is_macos:
             print(f"- MacOS: {config.platform_dirs['MacOS']}")
         else:

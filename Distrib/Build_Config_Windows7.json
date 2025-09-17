@@ -1,0 +1,47 @@
+{
+  "include_files": [
+    "src/**/*.py",
+    "requirements.txt",
+    "README.md",
+    "start_gui.py",
+    "version.txt"
+  ],
+  "exclude_files": [
+    "**/__pycache__",
+    "*.log",
+    "*.db",
+    "logs/*",
+    "*.pyc",
+    "*.jpg",
+    "*.jpeg",
+    "*.png",
+    "*.bmp",
+    "*.tiff",
+    "*.tif",
+    "datestamp_settings.ini",
+    "config.ini",
+    "build/**",
+    "dist/**",
+    "*.spec"
+  ],
+  "windows7_build": {
+    "description": "Сборка для Windows 7 - максимальная совместимость",
+    "compatibility": "Windows 7 SP1",
+    "architecture": "x86",
+    "python_version": "3.8-3.9",
+    "features": [
+      "x86 архитектура для максимальной совместимости",
+      "Минимальные системные требования",
+      "Совместимость с Windows 7 SP1",
+      "Стабильные версии библиотек"
+    ],
+    "requirements": {
+      "pillow": ">=8.0.0,<9.0.0",
+      "opencv-python": ">=4.5.0,<4.8.0",
+      "exifread": ">=2.3.0",
+      "piexif": ">=1.1.3",
+      "numpy": ">=1.19.0,<1.24.0",
+      "pywin32": ">=227"
+    }
+  }
+}

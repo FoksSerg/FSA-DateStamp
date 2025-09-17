@@ -4,8 +4,7 @@ VSVersionInfo(
     prodvers=(1, 1, 25, 249),
     mask=0x3f,
     flags=0x0,
-    # Изменено для совместимости с Windows 7 (0x40004 -> 0x40001)
-    OS=0x40001,
+    OS=0x40004,
     fileType=0x1,
     subtype=0x0,
     date=(0, 0)
@@ -15,12 +14,12 @@ VSVersionInfo(
       StringTable(
         u'040904B0',
         [StringStruct(u'CompanyName', u'AW-Software'),
-        StringStruct(u'FileDescription', u'FSA-DateStamp - Универсальная версия для Windows 7-11'),
+        StringStruct(u'FileDescription', u'FSA-DateStamp - Версия для Windows 11'),
         StringStruct(u'FileVersion', u'1.01.25.249'),
         StringStruct(u'InternalName', u'FSA-DateStamp'),
         StringStruct(u'LegalCopyright', u'Copyright (c) 2025 AW-Software'),
         StringStruct(u'OriginalFilename', u'FSA-DateStamp.exe'),
-        StringStruct(u'ProductName', u'FSA-DateStamp Universal'),
+        StringStruct(u'ProductName', u'FSA-DateStamp'),
         StringStruct(u'ProductVersion', u'1.01.25.249')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
