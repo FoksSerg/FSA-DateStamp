@@ -66,33 +66,45 @@ class InstallerBuilder:
         
         return "1.01.25.249"
     
-    def build_installer(self, target_os=None):
-        """Сборка инсталлятора для указанной ОС или текущей"""
-        target_os = target_os or self.current_os
-        
-        print(f"🚀 Начинаем сборку инсталлятора для {target_os.upper()}")
+    def build_installer(self):
+        """Сборка инсталлятора для текущей ОС"""
+        print(f"🚀 Начинаем сборку инсталлятора для {self.current_os.upper()}")
         
         # Проверяем наличие собранного приложения
         if not self.check_built_application():
             print("❌ Сначала необходимо собрать приложение через Build.py")
             return False
         
-        # Выбираем метод сборки в зависимости от ОС
-        if target_os == "windows":
+        # Выбираем метод сборки в зависимости от текущей ОС
+        if self.current_os == "windows":
             return self.build_windows_installer()
-        elif target_os == "darwin":  # macOS
+        elif self.current_os == "darwin":  # macOS
             return self.build_macos_installer()
-        elif target_os == "linux":
+        elif self.current_os == "linux":
             return self.build_linux_installer()
         else:
-            print(f"❌ Неподдерживаемая ОС: {target_os}")
+            print(f"❌ Неподдерживаемая ОС: {self.current_os}")
             return False
     
     def check_built_application(self):
         """Проверка наличия собранного приложения"""
         if self.current_os == "windows":
-            exe_path = self.project_root / "Distrib" / "Windows" / "FSA-DateStamp.exe"
-            return exe_path.exists()
+            # Проверяем наличие всех версий Windows дистрибутивов
+            windows_versions = ['Windows7', 'Windows8', 'Windows10', 'Windows11']
+            available_versions = []
+            
+            for version in windows_versions:
+                exe_path = self.project_root / "Distrib" / version / "FSA-DateStamp.exe"
+                if exe_path.exists():
+                    available_versions.append(version)
+            
+            if available_versions:
+                print(f"✅ Найдены дистрибутивы для Windows: {', '.join(available_versions)}")
+                return True
+            else:
+                print("❌ Не найдено ни одного Windows дистрибутива")
+                return False
+                
         elif self.current_os == "darwin":  # macOS
             app_path = self.project_root / "Distrib" / "MacOS" / "FSA-DateStamp.app"
             return app_path.exists()
@@ -153,14 +165,89 @@ class InstallerBuilder:
             return False
     
     def create_inno_setup_script(self):
-        """Создание Inno Setup скрипта"""
-        exe_path = self.project_root / "Distrib" / "Windows" / "FSA-DateStamp.exe"
+        """Создание универсального Inno Setup скрипта для существующих версий Windows"""
         
         # Исправляем формат версии для Inno Setup (1.1.25.249 -> 1.01.25.249)
         version_parts = self.version.split('.')
         if len(version_parts) >= 2 and len(version_parts[1]) == 1:
             version_parts[1] = f"0{version_parts[1]}"
         fixed_version = '.'.join(version_parts)
+        
+        # Получаем пути к дистрибутивам и проверяем их существование
+        distrib_path = self.project_root / "Distrib"
+        available_versions = {}
+        
+        # Проверяем каждую версию Windows
+        versions_to_check = [
+            ('Windows7', 'Windows 7'),
+            ('Windows8', 'Windows 8/8.1'),
+            ('Windows10', 'Windows 10'),
+            ('Windows11', 'Windows 11')
+        ]
+        
+        for folder_name, display_name in versions_to_check:
+            exe_path = distrib_path / folder_name / "FSA-DateStamp.exe"
+            if exe_path.exists():
+                available_versions[folder_name] = {
+                    'path': exe_path,
+                    'display_name': display_name,
+                    'exe_name': f"FSA-DateStamp-{folder_name}.exe"
+                }
+                print(f"✅ Найден дистрибутив: {display_name}")
+            else:
+                print(f"⚠️ Дистрибутив не найден: {display_name}")
+        
+        if not available_versions:
+            raise FileNotFoundError("Не найдено ни одного Windows дистрибутива!")
+        
+        # Определяем fallback версию (приоритет: Windows10 > Windows11 > Windows8 > Windows7)
+        fallback_version = None
+        for preferred in ['Windows10', 'Windows11', 'Windows8', 'Windows7']:
+            if preferred in available_versions:
+                fallback_version = preferred
+                break
+        
+        # Генерируем секцию [Files] только для существующих версий
+        files_section = ""
+        for version_name, version_info in available_versions.items():
+            check_function = f"Is{version_name}"
+            files_section += f'; {version_info["display_name"]} версия\n'
+            files_section += f'Source: "{version_info["path"]}"; DestDir: "{{app}}"; DestName: "{version_info["exe_name"]}"; Flags: ignoreversion; Check: {check_function}\n'
+        
+        # Генерируем ВСЕ функции проверки версий (используем простой подход)
+        version_checks = """function IsWindows7: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+  Result := (Version.Major = 6) and (Version.Minor = 1);
+end;
+
+function IsWindows8: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+  Result := (Version.Major = 6) and ((Version.Minor = 2) or (Version.Minor = 3));
+end;
+
+function IsWindows10: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+  Result := (Version.Major = 10) and (Version.Minor = 0) and (Version.Build < 22000);
+end;
+
+function IsWindows11: Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+  Result := (Version.Major = 10) and (Version.Minor = 0) and (Version.Build >= 22000);
+end;
+
+"""
         
         return f"""[Setup]
 AppName=FSA-DateStamp
@@ -174,12 +261,13 @@ DefaultGroupName=AW-Software\\FSA-DateStamp
 AllowNoIcons=yes
 LicenseFile=
 OutputDir=installer_output
-OutputBaseFilename=FSA-DateStamp-Setup
+OutputBaseFilename=FSA-DateStamp-Universal-Setup
 SetupIconFile=
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+MinVersion=6.1
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\\Russian.isl"
@@ -189,8 +277,7 @@ Name: "desktopicon"; Description: "{{cm:CreateDesktopIcon}}"; GroupDescription: 
 Name: "quicklaunchicon"; Description: "{{cm:CreateQuickLaunchIcon}}"; GroupDescription: "{{cm:AdditionalIcons}}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "{exe_path}"; DestDir: "{{app}}"; Flags: ignoreversion
-Source: "{self.project_root}\\Distrib\\Windows\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs
+{files_section}
 
 [Icons]
 Name: "{{group}}\\FSA-DateStamp"; Filename: "{{app}}\\FSA-DateStamp.exe"
@@ -200,6 +287,95 @@ Name: "{{userappdata}}\\Microsoft\\Internet Explorer\\Quick Launch\\FSA-DateStam
 
 [Run]
 Filename: "{{app}}\\FSA-DateStamp.exe"; Description: "{{cm:LaunchProgram,FSA-DateStamp}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+{version_checks}
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  SourceFile, DestFile: AnsiString;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    // Выбираем нужный исполняемый файл на основе версии Windows
+    SourceFile := '';
+    DestFile := ExpandConstant('{{app}}\\FSA-DateStamp.exe');
+    
+    // Выбираем версию по принципу совместимости
+    if IsWindows7 then
+    begin
+      // На Windows 7 - только Windows 7 сборка
+      if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows7.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows7.exe')
+      else
+      begin
+        MsgBox('Ошибка: Для Windows 7 требуется специальная сборка FSA-DateStamp-Windows7.exe, которая не найдена в пакете установки.', mbError, MB_OK);
+        Abort;
+      end;
+    end
+    else if IsWindows8 then
+    begin
+      // На Windows 8 - ищем Windows 8, затем Windows 10, затем Windows 11
+      if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')
+      else
+      begin
+        MsgBox('Ошибка: Не найдено ни одной совместимой сборки для Windows 8.', mbError, MB_OK);
+        Abort;
+      end;
+    end
+    else if IsWindows10 then
+    begin
+      // На Windows 10 - ищем Windows 10, затем Windows 11, затем Windows 8
+      if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')
+      else
+      begin
+        MsgBox('Ошибка: Не найдено ни одной совместимой сборки для Windows 10.', mbError, MB_OK);
+        Abort;
+      end;
+    end
+    else if IsWindows11 then
+    begin
+      // На Windows 11 - ищем Windows 11, затем Windows 10, затем Windows 8
+      if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe')
+      else if FileExists(ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')) then
+        SourceFile := ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe')
+      else
+      begin
+        MsgBox('Ошибка: Не найдено ни одной совместимой сборки для Windows 11.', mbError, MB_OK);
+        Abort;
+      end;
+    end
+    else
+    begin
+      MsgBox('Ошибка: Неподдерживаемая версия Windows.', mbError, MB_OK);
+      Abort;
+    end;
+    
+    // Копируем выбранный файл как основной
+    if SourceFile <> '' then
+    begin
+      FileCopy(SourceFile, DestFile, False);
+      // Удаляем временные файлы версий
+      DeleteFile(ExpandConstant('{{app}}\\FSA-DateStamp-Windows7.exe'));
+      DeleteFile(ExpandConstant('{{app}}\\FSA-DateStamp-Windows8.exe'));
+      DeleteFile(ExpandConstant('{{app}}\\FSA-DateStamp-Windows10.exe'));
+      DeleteFile(ExpandConstant('{{app}}\\FSA-DateStamp-Windows11.exe'));
+    end;
+  end;
+end;
 """
     
     def check_inno_setup(self):
@@ -289,35 +465,20 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='FSA-DateStamp Installer Builder')
-    parser.add_argument('--os', choices=['windows', 'macos', 'linux'], 
-                       help='Целевая ОС (по умолчанию - текущая)')
     parser.add_argument('--portable', action='store_true', 
                        help='Создать портативную версию')
-    parser.add_argument('--all', action='store_true', 
-                       help='Создать инсталляторы для всех ОС')
     
     args = parser.parse_args()
     
     builder = InstallerBuilder()
     
-    if args.all:
-        # Сборка для всех ОС
-        success = True
-        for os_name in ['windows', 'macos', 'linux']:
-            print(f"\n{'='*60}")
-            print(f"Сборка для {os_name.upper()}")
-            print(f"{'='*60}")
-            if not builder.build_installer(os_name):
-                success = False
-        return 0 if success else 1
-    
-    elif args.portable:
+    if args.portable:
         # Создание портативной версии
         return 0 if builder.create_portable_version() else 1
     
     else:
-        # Сборка для указанной или текущей ОС
-        return 0 if builder.build_installer(args.os) else 1
+        # Сборка инсталлятора для текущей ОС
+        return 0 if builder.build_installer() else 1
 
 if __name__ == "__main__":
     sys.exit(main())
