@@ -167,3 +167,12 @@ datestamp_settings.ini
 
 # Installer generated files
 Installer/Windows/InnoSetup/
+
+# Distribution folders (versioned builds)
+Distrib/Windows7/
+Distrib/Windows8/
+Distrib/Windows10/
+Distrib/Windows11/
+Distrib/Universal/
+Distrib/MacOS/
+Distrib/Linux/

@@ -431,7 +431,7 @@ class BuildConfig:
                 '--onefile',
                 '--windowed',
                 '--name', 'FSA-DateStamp',
-                '--add-data', f'{self.icons_dir}:icons',
+                '--add-data', f'{self.icons_dir}{os.pathsep}icons',
                 '--specpath', self.base_dir,
                 '--workpath', os.path.join(self.base_dir, 'build'),
                 '--distpath', os.path.join(self.base_dir, 'dist')
@@ -487,8 +487,7 @@ class BuildConfig:
                 params.extend(['--hidden-import', 'PIL.ImageEnhance'])
                 
                 # OpenCV
-                params.extend(['--hidden-import', 'cv2'])
-                params.extend(['--hidden-import', 'cv2.cv2'])
+                # cv2 импортируется условно в коде
                 
                 # EXIF библиотеки
                 params.extend(['--hidden-import', 'exifread'])
@@ -565,7 +564,7 @@ class BuildConfig:
                 params.extend(['--hidden-import', 'PIL.ImageFont'])
                 
                 # OpenCV
-                params.extend(['--hidden-import', 'cv2'])
+                # cv2 импортируется условно в коде
                 
                 # EXIF библиотеки
                 params.extend(['--hidden-import', 'exifread'])
@@ -583,7 +582,7 @@ class BuildConfig:
             src_path = os.path.join(self.project_root, 'src')
             if os.path.exists(src_path):
                 # Используем правильный разделитель для PyInstaller на macOS/Unix
-                params.extend(['--add-data', f'{src_path}:src'])
+                params.extend(['--add-data', f'{src_path}{os.pathsep}src'])
             
             # Добавляем путь к основному скрипту (GUI версия)
             script_path = os.path.join(self.project_root, 'src', 'start_gui.py')

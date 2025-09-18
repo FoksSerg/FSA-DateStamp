@@ -1,5 +1,4 @@
 import os
-import cv2
 import argparse
 import shutil
 import stat
@@ -363,9 +362,17 @@ def add_datetime_watermark(input_path, output_path, datetime_obj, font_size=30,
     if input_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
         image = Image.open(input_path)
     else:
-        # Для других форматов используем OpenCV
-        img_cv = cv2.imread(input_path)
-        image = Image.fromarray(cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB))
+        # Для других форматов пробуем использовать OpenCV
+        try:
+            import cv2
+            img_cv = cv2.imread(input_path)
+            image = Image.fromarray(cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB))
+        except ImportError:
+            # Если OpenCV недоступен, пробуем открыть через PIL
+            try:
+                image = Image.open(input_path)
+            except Exception as e:
+                raise Exception(f"Не удалось открыть изображение {input_path}. OpenCV недоступен, а PIL не поддерживает этот формат: {e}")
     
     # Форматируем дату и время
     dt_string = datetime_obj.strftime('%Y-%m-%d %H:%M:%S')
