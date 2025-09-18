@@ -366,6 +366,81 @@ class BuildConfig:
                 logger.error(f"Ошибка при удалении {item_path}: {str(e)}")
                 logger.error(traceback.format_exc())
                 
+    def clean_unnecessary_files(self):
+        """Очистка лишних файлов и папок после сборки"""
+        try:
+            logger.info("Начало очистки лишних файлов после сборки")
+            
+            if self.is_macos:
+                # Очистка macOS приложения
+                app_path = os.path.join(self.platform_dirs['MacOS'], 'FSA-DateStamp.app')
+                if os.path.exists(app_path):
+                    # Удаляем пустую папку Frameworks если она пустая
+                    frameworks_path = os.path.join(app_path, 'Contents', 'Frameworks')
+                    if os.path.exists(frameworks_path):
+                        try:
+                            # Проверяем, пустая ли папка
+                            if not os.listdir(frameworks_path):
+                                logger.info(f"Удаление пустой папки Frameworks: {frameworks_path}")
+                                os.rmdir(frameworks_path)
+                            else:
+                                logger.info(f"Папка Frameworks не пустая, оставляем: {frameworks_path}")
+                        except Exception as e:
+                            logger.warning(f"Не удалось удалить папку Frameworks: {str(e)}")
+                    
+                    # Удаляем временные файлы PyInstaller если есть
+                    temp_files_to_remove = [
+                        'Contents/_CodeSignature/CodeResources',  # Цифровая подпись (временная)
+                    ]
+                    
+                    for temp_file in temp_files_to_remove:
+                        temp_file_path = os.path.join(app_path, temp_file)
+                        if os.path.exists(temp_file_path):
+                            try:
+                                logger.info(f"Удаление временного файла: {temp_file_path}")
+                                os.unlink(temp_file_path)
+                            except Exception as e:
+                                logger.warning(f"Не удалось удалить {temp_file_path}: {str(e)}")
+                    
+                    # Удаляем пустую папку _CodeSignature если она пустая
+                    codesign_path = os.path.join(app_path, 'Contents', '_CodeSignature')
+                    if os.path.exists(codesign_path):
+                        try:
+                            # Проверяем, пустая ли папка
+                            if not os.listdir(codesign_path):
+                                logger.info(f"Удаление пустой папки _CodeSignature: {codesign_path}")
+                                os.rmdir(codesign_path)
+                            else:
+                                logger.info(f"Папка _CodeSignature не пустая, оставляем: {codesign_path}")
+                        except Exception as e:
+                            logger.warning(f"Не удалось удалить папку _CodeSignature: {str(e)}")
+            
+            elif self.is_windows:
+                # Очистка Windows приложения
+                target_dir = self.get_target_directory()
+                if os.path.exists(target_dir):
+                    # Удаляем временные файлы если есть
+                    temp_files_to_remove = [
+                        'FSA-DateStamp.exe.manifest',
+                        'FSA-DateStamp.pdb',
+                        'FSA-DateStamp.map'
+                    ]
+                    
+                    for temp_file in temp_files_to_remove:
+                        temp_file_path = os.path.join(target_dir, temp_file)
+                        if os.path.exists(temp_file_path):
+                            try:
+                                logger.info(f"Удаление временного файла: {temp_file_path}")
+                                os.unlink(temp_file_path)
+                            except Exception as e:
+                                logger.warning(f"Не удалось удалить {temp_file_path}: {str(e)}")
+            
+            logger.info("Очистка лишних файлов завершена")
+            
+        except Exception as e:
+            logger.error(f"Ошибка при очистке лишних файлов: {str(e)}")
+            logger.error(traceback.format_exc())
+                
     def _create_version_file(self, version_file):
         """Создание файла version.txt с учетом версии Windows"""
         try:
@@ -718,6 +793,11 @@ def build():
             print(f"- MacOS: {config.platform_dirs['MacOS']}")
         else:
             print(f"- Linux: {config.platform_dirs['Linux']}")
+            
+        # Очистка лишних файлов после сборки
+        print_step("Очистка лишних файлов после сборки")
+        config.clean_unnecessary_files()
+        print_success("Лишние файлы успешно удалены")
             
         # ОБЯЗАТЕЛЬНАЯ очистка временных файлов после успешной сборки
         print_step("Очистка временных файлов сборки")
