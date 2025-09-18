@@ -1,6 +1,6 @@
 # Структура инсталлятора FSA-DateStamp
 
-**Версия:** 1.01.25.249 (6 сентября 2025)  
+**Версия:** 1.02.25.261 (18 сентября 2025)  
 **Компания:** AW-Software  
 **Автор:** Сергей Фокин @FoksSerg  
 **Email:** foks_serg@mail.ru
@@ -12,11 +12,11 @@
 
 Версия формируется по схеме: **X.YY.ZZ.DDD**
 - **X** - мажорная версия (1)
-- **YY** - минорная версия (01) 
+- **YY** - минорная версия (02) 
 - **ZZ** - год (25 = 2025)
-- **DDD** - день года (249 = 6 сентября)
+- **DDD** - день года (261 = 18 сентября)
 
-Пример: `1.01.25.249` = версия 1.01, год 2025, 249-й день года (6 сентября)
+Пример: `1.02.25.261` = версия 1.02, год 2025, 261-й день года (18 сентября)
 
 ## Структура папок
 
@@ -40,33 +40,17 @@ FSA-DateStamp/
 ```
 Windows/
 ├── installer.iss                     # Основной скрипт Inno Setup
-├── setup.ico                         # Иконка инсталлятора
-├── license.txt                       # Лицензионное соглашение
-├── readme.txt                        # Инструкция по установке
-├── resources/                        # Дополнительные ресурсы
-│   ├── fonts/                        # Шрифты для приложения
-│   ├── images/                       # Изображения и иконки
-│   └── configs/                      # Конфигурационные файлы
-├── build_installer.py                # Скрипт сборки инсталлятора
 └── installer_output/                 # Готовые инсталляторы
-    ├── FSA-DateStamp-Setup.exe      # Основной инсталлятор
-    └── FSA-DateStamp-Portable.zip   # Портативная версия
+    └── FSA-DateStamp-Setup.exe      # Основной инсталлятор
 ```
 
 ### macOS (Installer/macOS/)
 ```
 macOS/
-├── installer.pkg                     # PKG инсталлятор
-├── installer.dmg                     # DMG образ
-├── installer.app                     # App Store версия
-├── resources/
-│   ├── fonts/
-│   ├── images/
-│   └── configs/
-├── build_installer.py                # Скрипт сборки
-└── installer_output/
-    ├── FSA-DateStamp.dmg
-    └── FSA-DateStamp.pkg
+└── installer_output/                 # Готовые инсталляторы
+    ├── FSA-DateStamp.pkg            # PKG инсталлятор
+    ├── FSA-DateStamp.dmg            # DMG образ
+    └── FSA-DateStamp-Portable.zip   # Портативная версия
 ```
 
 ### Linux (Installer/Linux/)
@@ -152,17 +136,11 @@ def create_linux_installer(version):
 
 ### Локальная сборка:
 ```bash
-# Сборка для Windows
-python Distrib/Build.py --os windows --create-installer
+# Сборка приложения (автоматически определяет ОС)
+python3 Distrib/Build.py
 
-# Сборка для macOS
-python Distrib/Build.py --os macos --create-installer
-
-# Сборка для Linux
-python Distrib/Build.py --os linux --create-installer
-
-# Сборка для всех ОС
-python Distrib/Build.py --all-os --create-installer
+# Создание установщиков
+python3 Installer/build_installer.py
 ```
 
 ## Требования к инсталляторам

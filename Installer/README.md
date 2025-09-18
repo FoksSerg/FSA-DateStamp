@@ -1,6 +1,6 @@
 # FSA-DateStamp - Инсталляторы
 
-**Версия:** 1.01.25.249 (6 сентября 2025)  
+**Версия:** 1.02.25.261 (18 сентября 2025)  
 **Компания:** AW-Software  
 **Автор:** Сергей Фокин @FoksSerg  
 **Email:** foks_serg@mail.ru
@@ -11,11 +11,11 @@
 
 Версия формируется по схеме: **X.YY.ZZ.DDD**
 - **X** - мажорная версия (1)
-- **YY** - минорная версия (01)
+- **YY** - минорная версия (02)
 - **ZZ** - год (25 = 2025)
-- **DDD** - день года (249 = 6 сентября)
+- **DDD** - день года (261 = 18 сентября)
 
-Пример: `1.01.25.249` = версия 1.01, год 2025, 249-й день года (6 сентября)
+Пример: `1.02.25.261` = версия 1.02, год 2025, 261-й день года (18 сентября)
 
 ## Структура
 
@@ -24,17 +24,13 @@ Installer/
 ├── build_installer.py          # Универсальный скрипт сборки
 ├── Windows/                    # Windows инсталляторы
 │   ├── installer.iss          # Inno Setup скрипт
-│   ├── installer_output/      # Готовые инсталляторы
-│   └── resources/             # Дополнительные ресурсы
+│   └── installer_output/      # Готовые инсталляторы
+│       └── FSA-DateStamp-Setup.exe
 ├── macOS/                      # macOS инсталляторы
-│   ├── installer.pkg          # PKG инсталлятор
-│   ├── installer.dmg          # DMG образ
 │   └── installer_output/      # Готовые инсталляторы
-├── Linux/                      # Linux инсталляторы
-│   ├── installer.deb          # DEB пакет
-│   ├── installer.rpm          # RPM пакет
-│   ├── installer.AppImage     # AppImage
-│   └── installer_output/      # Готовые инсталляторы
+│       ├── FSA-DateStamp.pkg  # PKG инсталлятор
+│       ├── FSA-DateStamp.dmg  # DMG образ
+│       └── FSA-DateStamp-Portable.zip
 └── README.md                   # Этот файл
 ```
 
@@ -42,24 +38,12 @@ Installer/
 
 ### Сборка для текущей ОС
 ```bash
-python build_installer.py
-```
-
-### Сборка для конкретной ОС
-```bash
-python build_installer.py --os windows
-python build_installer.py --os macos
-python build_installer.py --os linux
-```
-
-### Сборка для всех ОС
-```bash
-python build_installer.py --all
+python3 build_installer.py
 ```
 
 ### Создание портативной версии
 ```bash
-python build_installer.py --portable
+python3 build_installer.py --portable
 ```
 
 ## Требования
@@ -82,13 +66,13 @@ python build_installer.py --portable
 
 После успешной сборки инсталляторы будут находиться в:
 - **Windows**: `Windows/installer_output/FSA-DateStamp-Setup.exe`
-- **macOS**: `macOS/installer_output/FSA-DateStamp.dmg`
-- **Linux**: `Linux/installer_output/FSA-DateStamp.deb`
+- **macOS**: `macOS/installer_output/FSA-DateStamp.pkg` и `FSA-DateStamp.dmg`
+- **macOS Portable**: `macOS/installer_output/FSA-DateStamp-Portable.zip`
 
 ## Статус реализации
 
 - ✅ **Windows**: Полностью реализован (Inno Setup)
-- ⚠️ **macOS**: В разработке (PKG/DMG)
+- ✅ **macOS**: Полностью реализован (PKG/DMG/Portable)
 - ⚠️ **Linux**: В разработке (DEB/RPM/AppImage)
 
 ## Интеграция с Build.py

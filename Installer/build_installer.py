@@ -4,7 +4,7 @@
 FSA-DateStamp - Универсальный скрипт сборки инсталляторов
 Поддерживает Windows, macOS и Linux
 
-Версия: 1.01.25.249 (6 сентября 2025)
+Версия: 1.02.25.261 (18 сентября 2025)
 Компания: AW-Software
 Автор: Сергей Фокин @FoksSerg
 Email: foks_serg@mail.ru
@@ -64,7 +64,7 @@ class InstallerBuilder:
         except Exception as e:
             print(f"⚠️ Не удалось получить версию из version.txt: {e}")
         
-        return "1.01.25.249"
+        return "1.02.25.261"
     
     def build_installer(self):
         """Сборка инсталлятора для текущей ОС"""
@@ -400,11 +400,41 @@ end;
             return False
     
     def build_macos_installer(self):
-        """Сборка macOS инсталлятора (заглушка)"""
+        """Сборка macOS инсталлятора (PKG + DMG)"""
         print("🍎 Сборка macOS инсталлятора...")
-        print("⚠️ macOS инсталлятор пока не реализован")
-        print("📋 Планируется: PKG, DMG, App Store")
-        return False
+        
+        # Создаем папку для macOS инсталлятора
+        macos_dir = self.installer_dir / "macOS"
+        macos_dir.mkdir(exist_ok=True)
+        
+        # Создаем папку для вывода
+        output_dir = macos_dir / "installer_output"
+        output_dir.mkdir(exist_ok=True)
+        
+        # Проверяем зависимости
+        if not self.check_macos_dependencies():
+            return False
+        
+        # Обновляем версию в Info.plist
+        if not self.update_info_plist():
+            print("⚠️ Не удалось обновить версию в Info.plist, продолжаем с текущей версией")
+        
+        # Создаем PKG установщик
+        pkg_success = self.create_pkg_installer(macos_dir, output_dir)
+        
+        # Создаем DMG образ
+        dmg_success = self.create_dmg_installer(macos_dir, output_dir)
+        
+        if pkg_success or dmg_success:
+            print("✅ macOS инсталлятор успешно создан!")
+            if pkg_success:
+                print(f"📦 PKG файл: {output_dir / 'FSA-DateStamp.pkg'}")
+            if dmg_success:
+                print(f"💿 DMG файл: {output_dir / 'FSA-DateStamp.dmg'}")
+            return True
+        else:
+            print("❌ Не удалось создать ни одного macOS инсталлятора")
+            return False
     
     def build_linux_installer(self):
         """Сборка Linux инсталлятора (заглушка)"""
@@ -451,14 +481,193 @@ end;
             return False
     
     def create_macos_portable(self):
-        """Создание macOS портативной версии (заглушка)"""
-        print("⚠️ macOS портативная версия пока не реализована")
-        return False
+        """Создание macOS портативной версии (ZIP архив)"""
+        print("📦 Создание macOS портативной версии...")
+        
+        macos_dir = self.installer_dir / "macOS"
+        output_dir = macos_dir / "installer_output"
+        output_dir.mkdir(exist_ok=True)
+        
+        app_path = self.project_root / "Distrib" / "MacOS" / "FSA-DateStamp.app"
+        if not app_path.exists():
+            print("❌ macOS приложение не найдено")
+            return False
+        
+        portable_zip = output_dir / "FSA-DateStamp-Portable.zip"
+        
+        try:
+            import zipfile
+            with zipfile.ZipFile(portable_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for file_path in app_path.rglob('*'):
+                    if file_path.is_file():
+                        arcname = file_path.relative_to(app_path.parent)
+                        zipf.write(file_path, arcname)
+            
+            print(f"✅ macOS портативная версия создана: {portable_zip}")
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка создания портативной версии: {e}")
+            return False
     
     def create_linux_portable(self):
         """Создание Linux портативной версии (заглушка)"""
         print("⚠️ Linux портативная версия пока не реализована")
         return False
+    
+    def check_macos_dependencies(self):
+        """Проверка зависимостей для macOS"""
+        print("🔍 Проверяем зависимости для macOS...")
+        
+        # Проверяем наличие Xcode Command Line Tools
+        try:
+            result = subprocess.run(["xcode-select", "--print-path"], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                print("✅ Xcode Command Line Tools найдены")
+                return True
+            else:
+                print("❌ Xcode Command Line Tools не установлены")
+                print("📥 Установите: xcode-select --install")
+                return False
+        except FileNotFoundError:
+            print("❌ xcode-select не найден")
+            return False
+    
+    def update_info_plist(self):
+        """Обновление версии в Info.plist"""
+        try:
+            plist_path = self.project_root / "Distrib" / "MacOS" / "FSA-DateStamp.app" / "Contents" / "Info.plist"
+            if not plist_path.exists():
+                print("⚠️ Info.plist не найден")
+                return False
+            
+            # Читаем текущий plist
+            with open(plist_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Обновляем версию
+            updated_content = content.replace(
+                '<string>0.0.0</string>',
+                f'<string>{self.version}</string>'
+            )
+            
+            # Записываем обновленный plist
+            with open(plist_path, 'w', encoding='utf-8') as f:
+                f.write(updated_content)
+            
+            print(f"✅ Версия в Info.plist обновлена до {self.version}")
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Ошибка обновления Info.plist: {e}")
+            return False
+    
+    def create_pkg_installer(self, macos_dir, output_dir):
+        """Создание PKG установщика"""
+        print("📦 Создание PKG установщика...")
+        
+        try:
+            app_path = self.project_root / "Distrib" / "MacOS" / "FSA-DateStamp.app"
+            pkg_path = output_dir / "FSA-DateStamp.pkg"
+            
+            # Создаем временную папку для сборки
+            temp_dir = macos_dir / "temp_pkg"
+            temp_dir.mkdir(exist_ok=True)
+            
+            # Копируем приложение в Applications
+            apps_dir = temp_dir / "Applications"
+            apps_dir.mkdir(exist_ok=True)
+            shutil.copytree(app_path, apps_dir / "FSA-DateStamp.app", dirs_exist_ok=True)
+            
+            # Создаем PKG с помощью pkgbuild
+            result = subprocess.run([
+                "pkgbuild",
+                "--root", str(temp_dir),
+                "--identifier", "com.fsa.datestamp",
+                "--version", self.version,
+                "--install-location", "/",
+                str(pkg_path)
+            ], capture_output=True, text=True)
+            
+            # Очищаем временную папку
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            if result.returncode == 0:
+                print("✅ PKG установщик создан успешно")
+                return True
+            else:
+                print(f"❌ Ошибка создания PKG: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Ошибка при создании PKG: {e}")
+            return False
+    
+    def create_dmg_installer(self, macos_dir, output_dir):
+        """Создание DMG образа"""
+        print("💿 Создание DMG образа...")
+        
+        try:
+            app_path = self.project_root / "Distrib" / "MacOS" / "FSA-DateStamp.app"
+            dmg_path = output_dir / "FSA-DateStamp.dmg"
+            
+            # Создаем временную папку для DMG
+            temp_dmg_dir = macos_dir / "temp_dmg"
+            temp_dmg_dir.mkdir(exist_ok=True)
+            
+            # Копируем приложение
+            shutil.copytree(app_path, temp_dmg_dir / "FSA-DateStamp.app", dirs_exist_ok=True)
+            
+            # Создаем символическую ссылку на Applications
+            applications_link = temp_dmg_dir / "Applications"
+            if applications_link.exists():
+                applications_link.unlink()
+            applications_link.symlink_to("/Applications")
+            
+            # Создаем временный DMG
+            temp_dmg = macos_dir / "temp.dmg"
+            if temp_dmg.exists():
+                temp_dmg.unlink()
+            
+            # Создаем DMG образ
+            result = subprocess.run([
+                "hdiutil", "create",
+                "-srcfolder", str(temp_dmg_dir),
+                "-volname", "FSA-DateStamp",
+                "-fs", "HFS+",
+                "-fsargs", "-c c=64,a=16,e=16",
+                "-format", "UDRW",
+                str(temp_dmg)
+            ], capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"❌ Ошибка создания временного DMG: {result.stderr}")
+                shutil.rmtree(temp_dmg_dir, ignore_errors=True)
+                return False
+            
+            # Конвертируем в финальный DMG
+            final_result = subprocess.run([
+                "hdiutil", "convert",
+                str(temp_dmg),
+                "-format", "UDZO",
+                "-o", str(dmg_path)
+            ], capture_output=True, text=True)
+            
+            # Очищаем временные файлы
+            shutil.rmtree(temp_dmg_dir, ignore_errors=True)
+            if temp_dmg.exists():
+                temp_dmg.unlink()
+            
+            if final_result.returncode == 0:
+                print("✅ DMG образ создан успешно")
+                return True
+            else:
+                print(f"❌ Ошибка конвертации DMG: {final_result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Ошибка при создании DMG: {e}")
+            return False
 
 def main():
     """Главная функция"""

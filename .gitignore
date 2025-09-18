@@ -169,6 +169,7 @@ datestamp_settings.ini
 Installer/Windows/InnoSetup/
 Installer/Windows/installer_output/
 Installer/Windows/installer.iss
+Installer/macOS/
 
 # Distribution folders (versioned builds)
 Distrib/Windows7/

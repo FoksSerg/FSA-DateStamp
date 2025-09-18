@@ -2,7 +2,7 @@
 """
 Скрипт сборки приложения для всех поддерживаемых платформ
 
-Версия: 1.01.25.249 (6 сентября 2025)
+Версия: 1.02.25.261 (18 сентября 2025)
 Компания: AW-Software
 Автор: Сергей Фокин @FoksSerg
 Email: foks_serg@mail.ru
@@ -478,12 +478,12 @@ class BuildConfig:
         u'040904B0',
         [StringStruct(u'CompanyName', u'AW-Software'),
         StringStruct(u'FileDescription', u'{description}'),
-        StringStruct(u'FileVersion', u'1.01.25.249'),
+        StringStruct(u'FileVersion', u'1.02.25.261'),
         StringStruct(u'InternalName', u'FSA-DateStamp'),
         StringStruct(u'LegalCopyright', u'Copyright (c) 2025 AW-Software'),
         StringStruct(u'OriginalFilename', u'FSA-DateStamp.exe'),
         StringStruct(u'ProductName', u'FSA-DateStamp'),
-        StringStruct(u'ProductVersion', u'1.01.25.249')])
+        StringStruct(u'ProductVersion', u'1.02.25.261')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
